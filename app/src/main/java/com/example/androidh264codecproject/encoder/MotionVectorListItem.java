@@ -2,9 +2,9 @@ package com.example.androidh264codecproject.encoder;
 
 public class MotionVectorListItem {
 
-    private int mvX, mvY;
-    private int posX, posY;
-    private int sizeX, sizeY;
+    private int mvX,   mvY;   // Motion Vector Value (Value=Dst Pos-Src Pos)
+    private int posX,  posY;  // Block Position
+    private int sizeX, sizeY; // Block Size
 
     public MotionVectorListItem(
             int mvX, int mvY, int posX, int posY, int sizeX, int sizeY) {
