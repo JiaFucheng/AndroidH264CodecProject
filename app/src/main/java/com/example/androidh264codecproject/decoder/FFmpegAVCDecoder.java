@@ -1,5 +1,6 @@
 package com.example.androidh264codecproject.decoder;
 
+import com.example.androidh264codecproject.encoder.MotionVectorList;
 import com.example.androidh264codecproject.encoder.MotionVectorMap;
 
 public class FFmpegAVCDecoder {
@@ -34,9 +35,22 @@ public class FFmpegAVCDecoder {
         }
     }
 
+    public MotionVectorList getMotionVectorList() {
+        int count = nativeGetMotionVectorListCount(this.handle);
+        if (count > 0) {
+            int[] mvListData = new int[count * 6];
+            nativeGetMotionVectorList(this.handle, mvListData);
+            return new MotionVectorList(mvListData);
+        } else {
+            return null;
+        }
+    }
+
     private native long nativeInit(int videoWidth, int videoHeight);
     private native void nativeFree(long handle);
     private native boolean nativeDecodeFrame(long handle, byte[] packetData);
     private native boolean nativeGetMotionVectorMapData(long handle, int[] mvMapData);
+    private native int nativeGetMotionVectorListCount(long handle);
+    private native void nativeGetMotionVectorList(long handle, int[] mvListData);
 
 }

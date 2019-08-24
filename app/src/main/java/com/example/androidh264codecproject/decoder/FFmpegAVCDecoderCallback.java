@@ -2,9 +2,13 @@ package com.example.androidh264codecproject.decoder;
 
 import android.util.Log;
 
+import com.example.androidh264codecproject.encoder.MotionVectorList;
+import com.example.androidh264codecproject.encoder.MotionVectorListItem;
 import com.example.androidh264codecproject.encoder.MotionVectorMap;
 import com.example.androidh264codecproject.process.AccumulateCPU;
 import com.example.androidh264codecproject.process.AccumulateMode;
+
+import java.util.Locale;
 
 public class FFmpegAVCDecoderCallback extends DecoderCallback {
 
@@ -44,6 +48,16 @@ public class FFmpegAVCDecoderCallback extends DecoderCallback {
                     Log.d(TAG, String.format(
                             "Accu time %d ms",
                             System.currentTimeMillis() - startMs));
+                }
+            }
+
+            MotionVectorList mvList = decoder.getMotionVectorList();
+            if (mvList != null) {
+                Log.d(TAG, String.format(Locale.CHINA, "MV List Count: %d", mvList.getCount()));
+                for (int i = 0; i < mvList.getCount(); i++) {
+                    MotionVectorListItem item = mvList.getItem(i);
+                    int mvX = item.getMvX();
+                    int mvY = item.getMvY();
                 }
             }
         }

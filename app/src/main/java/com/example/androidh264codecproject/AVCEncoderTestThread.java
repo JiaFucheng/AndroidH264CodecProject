@@ -38,7 +38,7 @@ public class AVCEncoderTestThread extends Thread {
          * PATH 2: Video-H264/BasketballShoot
          */
         encoder.setOutputH264Path("/storage/emulated/0/" + "coviar_opencl/UCF-101-H264/YoYo");
-        //encoder.setDecoderCallback(new FFmpegAVCDecoderCallback(videoWidth, videoHeight));
+        encoder.setDecoderCallback(new FFmpegAVCDecoderCallback(videoWidth, videoHeight));
         //encoder.start();
         encoder.startAsync();
     }
