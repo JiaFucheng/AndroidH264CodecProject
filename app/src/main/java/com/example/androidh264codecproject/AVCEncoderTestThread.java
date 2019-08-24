@@ -21,11 +21,10 @@ public class AVCEncoderTestThread extends Thread {
         int bitrate     = BitrateTool.getAdaptiveBitrate(
                                         videoWidth, videoHeight);
 
-//        bitrate /= 16;
-
         MotionVectorMap.deleteMotionVectorMapFileIfExist();
 
         AVCEncoder encoder = new AVCEncoder(videoWidth, videoHeight, frameRate, bitrate);
+
         /*
          * PATH 1: /storage/emulated/0/coviar_opencl/UCF-101/YoYo/v_YoYo_g01_c01.yuv
          * PATH 2: /storage/emulated/0/coviar_opencl/Video/basketballshoot/basketballshoot_%dp.yuv
@@ -38,7 +37,9 @@ public class AVCEncoderTestThread extends Thread {
          * PATH 2: Video-H264/BasketballShoot
          */
         encoder.setOutputH264Path("/storage/emulated/0/" + "coviar_opencl/UCF-101-H264/YoYo");
+
         encoder.setDecoderCallback(new FFmpegAVCDecoderCallback(videoWidth, videoHeight));
+
         //encoder.start();
         encoder.startAsync();
     }
