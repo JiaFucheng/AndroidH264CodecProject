@@ -58,6 +58,10 @@ public class FFmpegAVCDecoderCallback extends DecoderCallback {
                     MotionVectorListItem item = mvList.getItem(i);
                     int mvX = item.getMvX();
                     int mvY = item.getMvY();
+                    int posX = item.getPosX();
+                    int posY = item.getPosY();
+                    int sizeX = item.getSizeX();
+                    int sizeY = item.getSizeY();
                 }
             }
         }
