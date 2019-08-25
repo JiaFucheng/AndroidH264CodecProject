@@ -56,8 +56,8 @@ public class AVCEncoder {
                                MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible);
         mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, bitrate);
         mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, frameRate);
-        mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 10);
-        //mediaFormat.setFloat(MediaFormat.KEY_I_FRAME_INTERVAL, GOP_SIZE / frameRate);
+        //mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 10);
+        mediaFormat.setFloat(MediaFormat.KEY_I_FRAME_INTERVAL, GOP_SIZE / frameRate);
 
         // If not set KEY_I_FRAME_INTERVAL, NullPointerException will occur
         //int keyIFrameInterval = mediaFormat.getInteger(MediaFormat.KEY_I_FRAME_INTERVAL);
