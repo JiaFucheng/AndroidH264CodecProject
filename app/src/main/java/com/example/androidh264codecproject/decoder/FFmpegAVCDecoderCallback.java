@@ -15,7 +15,7 @@ public class FFmpegAVCDecoderCallback extends DecoderCallback {
     private static final String TAG = "DecoderCallback";
 
     private boolean saveMV = false;
-    private boolean accuMV = true;
+    private boolean accuMV = false;
 
     private FFmpegAVCDecoder decoder;
     private AccumulateCPU    accu;
