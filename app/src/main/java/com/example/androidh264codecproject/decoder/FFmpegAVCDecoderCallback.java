@@ -53,7 +53,11 @@ public class FFmpegAVCDecoderCallback extends DecoderCallback {
 
             MotionVectorList mvList = decoder.getMotionVectorList();
             if (mvList != null) {
+<<<<<<< HEAD
                 //Log.d(TAG, String.format(Locale.CHINA, "MV List Count: %d", mvList.getCount()));
+=======
+                Log.d(TAG, String.format(Locale.CHINA, "MV List Count: %d", mvList.getCount()));
+>>>>>>> 74e7e5f5cd5478fd32216fd42c2f0295b3c76afd
                 for (int i = 0; i < mvList.getCount(); i++) {
                     MotionVectorListItem item = mvList.getItem(i);
                     int mvX = item.getMvX();
