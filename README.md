@@ -33,7 +33,7 @@ if (mvList != null) {
 |Width|340|
 |Height|256|
 |Color Format|YUV420Flexible|
-|Bit Rate|See [[1]](#ref)|
+|Bit Rate|576 kbps [[1]](#ref)|
 |Frame Rate|25|
 |I Frame Interval|0.48(s), i.e. GOP Size is 12|
 
