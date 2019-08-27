@@ -14,8 +14,10 @@ public class FFmpegAVCDecoderCallback extends DecoderCallback {
 
     private static final String TAG = "DecoderCallback";
 
-    private boolean saveMV = false;
-    private boolean accuMV = false;
+    private boolean getMVMap  = false;
+    private boolean saveMVMap = false;
+    private boolean accuMV    = false;
+    private boolean getMVList = true;
 
     private FFmpegAVCDecoder decoder;
     private AccumulateCPU    accu;
@@ -33,35 +35,40 @@ public class FFmpegAVCDecoderCallback extends DecoderCallback {
         System.arraycopy(encodedData, 0, packetData, 0, size);
         if (decoder.decodeFrame(packetData)) {
             // NOTE: Exactly got a decoded frame
-            MotionVectorMap mvMap = decoder.getMotionVectorMap();
-            if (mvMap != null) {
-                if (saveMV)
-                    MotionVectorMap.saveMotionVectorMap(
-                            mvMap,
-                            MotionVectorMap.DEFAULT_SAVE_FILEPATH,
-                            0);
 
-                if (accuMV) {
-                    long startMs = System.currentTimeMillis();
-                    accu.accumulateMV(mvMap.getData(),
-                            AccumulateMode.PIXEL_LEVEL);
-                    Log.d(TAG, String.format(
-                            "Accu time %d ms",
-                            System.currentTimeMillis() - startMs));
+            if (getMVMap) {
+                MotionVectorMap mvMap = decoder.getMotionVectorMap();
+                if (mvMap != null) {
+                    if (saveMVMap)
+                        MotionVectorMap.saveMotionVectorMap(
+                                mvMap,
+                                MotionVectorMap.DEFAULT_SAVE_FILEPATH,
+                                0);
+
+                    if (accuMV) {
+                        long startMs = System.currentTimeMillis();
+                        accu.accumulateMV(mvMap.getData(),
+                                AccumulateMode.PIXEL_LEVEL);
+                        Log.d(TAG, String.format(
+                                "Accu time %d ms",
+                                System.currentTimeMillis() - startMs));
+                    }
                 }
             }
 
-            MotionVectorList mvList = decoder.getMotionVectorList();
-            if (mvList != null) {
-                //Log.d(TAG, String.format(Locale.CHINA, "MV List Count: %d", mvList.getCount()));
-                for (int i = 0; i < mvList.getCount(); i++) {
-                    MotionVectorListItem item = mvList.getItem(i);
-                    int mvX = item.getMvX();
-                    int mvY = item.getMvY();
-                    int posX = item.getPosX();
-                    int posY = item.getPosY();
-                    int sizeX = item.getSizeX();
-                    int sizeY = item.getSizeY();
+            if (getMVList) {
+                MotionVectorList mvList = decoder.getMotionVectorList();
+                if (mvList != null) {
+                    //Log.d(TAG, String.format(Locale.CHINA, "MV List Count: %d", mvList.getCount()));
+                    for (int i = 0; i < mvList.getCount(); i++) {
+                        MotionVectorListItem item = mvList.getItem(i);
+                        int mvX = item.getMvX();
+                        int mvY = item.getMvY();
+                        int posX = item.getPosX();
+                        int posY = item.getPosY();
+                        int sizeX = item.getSizeX();
+                        int sizeY = item.getSizeY();
+                    }
                 }
             }
         }

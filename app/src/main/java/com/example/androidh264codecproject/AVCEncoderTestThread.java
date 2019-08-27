@@ -1,10 +1,14 @@
 package com.example.androidh264codecproject;
 
+import android.util.Log;
+
+import com.example.androidh264codecproject.dataset.DataSetLoader;
 import com.example.androidh264codecproject.decoder.FFmpegAVCDecoderCallback;
 import com.example.androidh264codecproject.encoder.AVCEncoder;
 import com.example.androidh264codecproject.encoder.BitrateTool;
 import com.example.androidh264codecproject.encoder.MotionVectorMap;
 
+import java.io.IOException;
 import java.util.Locale;
 
 public class AVCEncoderTestThread extends Thread {
@@ -21,18 +25,43 @@ public class AVCEncoderTestThread extends Thread {
         int bitrate     = BitrateTool.getAdaptiveBitrate(
                                         videoWidth, videoHeight);
 
+        final String sdCardDirectory = "/storage/emulated/0/";
+
+        /* DataSetLoader Test */
+        try {
+            DataSetLoader loader = new DataSetLoader(
+                    // List File
+                    sdCardDirectory + "coviar_opencl/datalists/ucf101_split_jfc_test.txt",
+                    // Input File Directory
+                    sdCardDirectory + "coviar_opencl/UCF-101",
+                    // Output File Directory
+                    sdCardDirectory + "coviar_opencl/UCF-101-H264");
+
+            String filePath = loader.getNextFileItemPath(DataSetLoader.TYPE_YUV);
+
+            Log.i("DataSetLoader", String.format(Locale.CHINA, "Load file %s", filePath));
+
+            String outFilePath = loader.getCurrentOutFileItemPath(DataSetLoader.TYPE_H264);
+
+            Log.i("DataSetLoader", String.format(Locale.CHINA, "Output file %s", outFilePath));
+
+            loader.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         /*
          * PATH 1: /storage/emulated/0/coviar_opencl/UCF-101/YoYo/v_YoYo_g01_c01.yuv
          * PATH 2: /storage/emulated/0/coviar_opencl/Video/basketballshoot/basketballshoot_%dp.yuv
          **/
-        String inputYUVFilePath = "/storage/emulated/0/"
+        String inputYUVFilePath = sdCardDirectory
                 + String.format(Locale.CHINA,
                         "coviar_opencl/UCF-101/YoYo/v_YoYo_g01_c01.yuv", videoHeight);
         /*
          * PATH 1: UCF-101-H264/YoYo
          * PATH 2: Video-H264/BasketballShoot
-         */
-        String outputH264Path = "/storage/emulated/0/" + "coviar_opencl/UCF-101-H264/YoYo";
+         **/
+        String outputH264Path = sdCardDirectory + "coviar_opencl/UCF-101-H264/YoYo";
 
         MotionVectorMap.deleteMotionVectorMapFileIfExist();
 

@@ -341,8 +341,9 @@ public class AVCEncoder {
             byte[] input = null;
 
             try {
+                Thread.sleep(16);  // 16ms for 60FPS
                 input = mYUVFileReader.readFrameData();
-            } catch (IOException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
 
