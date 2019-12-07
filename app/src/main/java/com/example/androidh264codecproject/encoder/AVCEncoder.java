@@ -15,6 +15,7 @@ import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.example.androidh264codecproject.decoder.DecoderCallback;
+import com.example.androidh264codecproject.decoder.FFmpegAVIDecoder;
 import com.example.androidh264codecproject.yuvtools.YUVI420FileReader;
 
 import static android.media.MediaCodec.BUFFER_FLAG_CODEC_CONFIG;
@@ -34,14 +35,15 @@ public class AVCEncoder {
 
     private MediaCodec mMediaCodec;
 
-    private YUVI420FileReader mYUVFileReader;
+    private YUVI420FileReader mYUVFileReader = null;
     private String mOutputPath;
-    private String mOutputFilename;
+    private String mOutputFilename = null;
     private BufferedOutputStream mOutputStream = null;
 
     private boolean isRunning = false;
 
     private DecoderCallback mDecoderCallback = null;
+    private FFmpegAVIDecoder mAVIDecoder = null;
 
     public AVCEncoder(int width, int height, int frameRate, int bitrate) {
         mWidth     = width;
@@ -93,8 +95,15 @@ public class AVCEncoder {
         mDecoderCallback = callback;
     }
 
+    public void setFFmpegAVIDecoder(FFmpegAVIDecoder decoder) {
+        mAVIDecoder = decoder;
+    }
+
     private String buildOutputFilePath() {
-        return mOutputPath + File.separator + mOutputFilename;
+        if (mOutputFilename == null)
+            return mOutputPath;
+        else
+            return mOutputPath + File.separator + mOutputFilename;
     }
 
     private void createOutputH264File() {
@@ -114,12 +123,18 @@ public class AVCEncoder {
 
             if (mYUVFileReader != null)
                 mYUVFileReader.close();
-            if (mOutputStream != null)
+            if (mOutputStream != null) {
+                mOutputStream.flush();
                 mOutputStream.close();
+            }
             if (mDecoderCallback != null)
                 mDecoderCallback.close();
+            if (mAVIDecoder != null)
+                mAVIDecoder.close();
 
             Log.d(TAG, "Stop codec success");
+
+            isRunning = false;
         } catch (Exception e){
             e.printStackTrace();
         }
@@ -140,11 +155,18 @@ public class AVCEncoder {
         mMediaCodec.start();
         Thread encoderThread = new Thread(new EncodeRunnable());
         encoderThread.start();
+
+        Log.i(TAG, "AVC encoder start");
     }
 
     public void startAsync() {
+        isRunning = true;
         mMediaCodec.setCallback(new AVCCallback());
         mMediaCodec.start();
+    }
+
+    public boolean isRunning() {
+        return this.isRunning;
     }
 
     /*private void NV21ToNV12(byte[] nv21,byte[] nv12,int width,int height) {
@@ -340,10 +362,24 @@ public class AVCEncoder {
 
             byte[] input = null;
 
-            try {
-                Thread.sleep(16);  // 16ms for 60FPS
+            /*try {
+                //Thread.sleep(16);  // 16ms for 60FPS
                 input = mYUVFileReader.readFrameData();
             } catch (Exception e) {
+                e.printStackTrace();
+            }*/
+
+            try {
+                if (mYUVFileReader != null) {
+                    input = mYUVFileReader.readFrameData();
+                } else if (mAVIDecoder != null) {
+                    // Read frame from AVI decoder
+                    input = mAVIDecoder.getFrameData();
+                } else {
+                    Log.e(TAG, "No frame data source");
+                }
+
+            } catch (IOException e) {
                 e.printStackTrace();
             }
 
@@ -360,7 +396,7 @@ public class AVCEncoder {
                 } else {
                     if (!endInputBuffer) {
                         codec.queueInputBuffer(index, 0, 0, 0, BUFFER_FLAG_END_OF_STREAM);
-                        Log.d(TAG, "End of input buffer");
+                        //Log.d(TAG, "End of input buffer");
                         endInputBuffer = true;
                     }
                 }
@@ -372,7 +408,7 @@ public class AVCEncoder {
                                             @NonNull MediaCodec.BufferInfo info) {
             if (index >= 0){
                 if ((info.flags & BUFFER_FLAG_END_OF_STREAM) != 0) {
-                    Log.d(TAG, "End of output buffer");
+                    //Log.d(TAG, "End of output buffer");
                     stop();
                 } else {
                     ByteBuffer outputBuffer = codec.getOutputBuffer(index);

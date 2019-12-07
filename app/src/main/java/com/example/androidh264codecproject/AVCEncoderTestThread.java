@@ -4,14 +4,23 @@ import android.util.Log;
 
 import com.example.androidh264codecproject.dataset.DataSetLoader;
 import com.example.androidh264codecproject.decoder.FFmpegAVCDecoderCallback;
+import com.example.androidh264codecproject.decoder.FFmpegAVIDecoder;
 import com.example.androidh264codecproject.encoder.AVCEncoder;
 import com.example.androidh264codecproject.encoder.BitrateTool;
+import com.example.androidh264codecproject.encoder.EncodeMode;
 import com.example.androidh264codecproject.encoder.MotionVectorMap;
 
 import java.io.IOException;
 import java.util.Locale;
 
 public class AVCEncoderTestThread extends Thread {
+
+    private boolean enableAVIDecodeTest = false;
+    private int encodeMode = EncodeMode.SYNC_MODE;
+
+    public void setEncodeMode(int encodeMode) {
+        this.encodeMode = encodeMode;
+    }
 
     @Override
     public void run() {
@@ -27,7 +36,58 @@ public class AVCEncoderTestThread extends Thread {
 
         final String sdCardDirectory = "/storage/emulated/0/";
 
-        /* DataSetLoader Test */
+        /*
+         * PATH 1: /storage/emulated/0/coviar_opencl/UCF-101/YoYo/v_YoYo_g01_c01.yuv
+         * PATH 2: /storage/emulated/0/coviar_opencl/Video/basketballshoot/basketballshoot_%dp.yuv
+         **/
+        String inputYUVFilePath = sdCardDirectory
+                                    + String.format(Locale.CHINA,
+                                        "coviar_opencl/UCF-101/YoYo/v_YoYo_g01_c01.yuv",
+                                        videoHeight);
+
+        /*
+         * PATH 1: UCF-101-H264/YoYo
+         * PATH 2: Video-H264/BasketballShoot
+         **/
+        String outputH264Path = sdCardDirectory + "coviar_opencl/UCF-101-H264/YoYo";
+
+        // Delete MV map file if it exists
+        MotionVectorMap.deleteMotionVectorMapFileIfExist();
+
+        FFmpegAVIDecoder decoder = null;
+        if (enableAVIDecodeTest) {
+            String inputAVIFilePath = sdCardDirectory
+                    + "coviar_opencl/UCF-101-AVI/YoYo/v_YoYo_g01_c01_340_256.avi";
+
+            // Create and initialize ffmpeg avi decoder
+            decoder = new FFmpegAVIDecoder();
+            decoder.setInputFilename(inputAVIFilePath);
+            decoder.setVideoInfo(videoWidth, videoHeight);
+            try {
+                decoder.prepare();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        // Create and initialize ffmpeg yuv encoder
+        AVCEncoder encoder = new AVCEncoder(videoWidth, videoHeight, frameRate, bitrate);
+        if (enableAVIDecodeTest) {
+            encoder.setFFmpegAVIDecoder(decoder);
+        } else {
+            encoder.setInputYUVFile(inputYUVFilePath);
+        }
+        //encoder.setOutputH264Path(outputH264Path);
+        encoder.setDecoderCallback(new FFmpegAVCDecoderCallback(videoWidth, videoHeight));
+
+        // Start encoder
+        if (encodeMode == EncodeMode.SYNC_MODE)
+            encoder.start();
+        else if (encodeMode == EncodeMode.ASYNC_MODE)
+            encoder.startAsync();
+    }
+
+    private void dataSetLoaderTest(final String sdCardDirectory) {
         try {
             DataSetLoader loader = new DataSetLoader(
                     // List File
@@ -49,28 +109,5 @@ public class AVCEncoderTestThread extends Thread {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-        /*
-         * PATH 1: /storage/emulated/0/coviar_opencl/UCF-101/YoYo/v_YoYo_g01_c01.yuv
-         * PATH 2: /storage/emulated/0/coviar_opencl/Video/basketballshoot/basketballshoot_%dp.yuv
-         **/
-        String inputYUVFilePath = sdCardDirectory
-                + String.format(Locale.CHINA,
-                        "coviar_opencl/UCF-101/YoYo/v_YoYo_g01_c01.yuv", videoHeight);
-        /*
-         * PATH 1: UCF-101-H264/YoYo
-         * PATH 2: Video-H264/BasketballShoot
-         **/
-        String outputH264Path = sdCardDirectory + "coviar_opencl/UCF-101-H264/YoYo";
-
-        MotionVectorMap.deleteMotionVectorMapFileIfExist();
-
-        AVCEncoder encoder = new AVCEncoder(videoWidth, videoHeight, frameRate, bitrate);
-        encoder.setInputYUVFile(inputYUVFilePath);
-        encoder.setOutputH264Path(outputH264Path);
-        encoder.setDecoderCallback(new FFmpegAVCDecoderCallback(videoWidth, videoHeight));
-
-        //encoder.start();  // Sync Mode
-        encoder.startAsync();  // Async Mode
     }
 }

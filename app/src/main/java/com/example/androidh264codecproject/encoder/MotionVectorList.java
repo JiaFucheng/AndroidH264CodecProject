@@ -14,6 +14,10 @@ public class MotionVectorList {
         return this.count;
     }
 
+    public int[] getData() {
+        return this.data;
+    }
+
     public MotionVectorListItem getItem(int i) {
 
         int off = i * 6;

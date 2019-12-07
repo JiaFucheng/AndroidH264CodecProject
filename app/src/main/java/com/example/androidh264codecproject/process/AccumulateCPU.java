@@ -29,10 +29,29 @@ public class AccumulateCPU extends AccumulateDevice {
         return accuMVArrayData;
     }
 
+    public void resetAccumulatedResidual() {
+        nativeResetAccumulatedResidual(this.handle);
+    }
+
+    public void accumulateResidual(byte[] resArrayData, int[] mvListData, int mvListCount) {
+        nativeAccumulateResidual(this.handle, resArrayData, mvListData, mvListCount);
+    }
+
+    public int[] getAccumulatedResidual() {
+        int[] accuResArrayData = new int[accuResDataSize];
+        nativeGetAccumulatedResidual(this.handle, accuResArrayData);
+        return accuResArrayData;
+    }
+
     private static native long nativeInit(int width, int height, int block_size);
     private static native void nativeShutdown(long handle);
 
     private static native void nativeResetAccumulatedMV(long handle);
     private static native void nativeAccumulateMV(long handle, int[] mvArrayData, int mode);
     private static native void nativeGetAccumulatedMV(long handle, int[] accuMVArrayData);
+
+    private static native void nativeResetAccumulatedResidual(long handle);
+    private static native void nativeAccumulateResidual(
+                                long handle, byte[] resArrayData, int[] mvListData, int mvListCount);
+    private static native void nativeGetAccumulatedResidual(long handle, int[] accuResArrayData);
 }

@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">AndroidH264CodecProject</string>
+    <string name="title_activity_avcencoder_test">AVCEncoderTestActivity</string>
 </resources>
