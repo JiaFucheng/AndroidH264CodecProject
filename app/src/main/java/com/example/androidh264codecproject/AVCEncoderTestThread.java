@@ -16,6 +16,8 @@ import java.util.Locale;
 public class AVCEncoderTestThread extends Thread {
 
     private boolean enableAVIDecodeTest = false;
+    private boolean enableH264OutputFile = false;
+    private boolean enableCallBackTest = true;
     private int encodeMode = EncodeMode.SYNC_MODE;
 
     public void setEncodeMode(int encodeMode) {
@@ -77,8 +79,13 @@ public class AVCEncoderTestThread extends Thread {
         } else {
             encoder.setInputYUVFile(inputYUVFilePath);
         }
-        //encoder.setOutputH264Path(outputH264Path);
-        encoder.setDecoderCallback(new FFmpegAVCDecoderCallback(videoWidth, videoHeight));
+        if (enableH264OutputFile) {
+            encoder.setOutputH264Path(outputH264Path);
+        }
+        if (enableCallBackTest) {
+            encoder.setDecoderCallback(
+                    new FFmpegAVCDecoderCallback(videoWidth, videoHeight));
+        }
 
         // Start encoder
         if (encodeMode == EncodeMode.SYNC_MODE)
