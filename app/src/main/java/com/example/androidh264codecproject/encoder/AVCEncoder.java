@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Locale;
 
 import android.annotation.SuppressLint;
@@ -33,6 +34,8 @@ public class AVCEncoder {
     private int mHeight;
     private int mFrameRate;
 
+    private long mTotalStartTime;
+
     private MediaCodec mMediaCodec;
 
     private YUVI420FileReader mYUVFileReader = null;
@@ -60,6 +63,8 @@ public class AVCEncoder {
         mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, frameRate);
         //mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 10);
         mediaFormat.setFloat(MediaFormat.KEY_I_FRAME_INTERVAL, GOP_SIZE / frameRate);
+
+        //mediaFormat.setInteger(MediaFormat.KEY_BITRATE_MODE, MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_CQ);
 
         // If not set KEY_I_FRAME_INTERVAL, NullPointerException will occur
         //int keyIFrameInterval = mediaFormat.getInteger(MediaFormat.KEY_I_FRAME_INTERVAL);
@@ -152,6 +157,8 @@ public class AVCEncoder {
     }*/
 
     public void start() {
+        mTotalStartTime = System.currentTimeMillis();
+
         mMediaCodec.start();
         Thread encoderThread = new Thread(new EncodeRunnable());
         encoderThread.start();
@@ -160,6 +167,8 @@ public class AVCEncoder {
     }
 
     public void startAsync() {
+        mTotalStartTime = System.currentTimeMillis();
+
         isRunning = true;
         mMediaCodec.setCallback(new AVCCallback());
         mMediaCodec.start();
@@ -332,7 +341,9 @@ public class AVCEncoder {
             }
 
             Log.i(TAG, String.format(Locale.CHINA,
-                                "Encoding finished, avg %.2f FPS", 1000.0f * frameIdx / encTimeSum));
+                    "Total time %d ms", System.currentTimeMillis() - mTotalStartTime));
+            Log.i(TAG, String.format(Locale.CHINA,
+                    "Encoding finished, avg %.2f FPS", 1000.0f * frameIdx / encTimeSum));
             stop();
         }
     }
@@ -340,7 +351,8 @@ public class AVCEncoder {
     private class AVCCallback extends MediaCodec.Callback {
 
         private long lastEncTime = -1;
-        private int frameIndex = 0;
+        private int inFrameIndex = 0;
+        private int outFrameIndex = 0;
 
         private boolean endInputBuffer  = false;
         private boolean endOutputBuffer = false;
@@ -362,12 +374,11 @@ public class AVCEncoder {
 
             byte[] input = null;
 
-            /*try {
-                //Thread.sleep(16);  // 16ms for 60FPS
-                input = mYUVFileReader.readFrameData();
+            try {
+                Thread.sleep(40);  // 40ms for 25FPS
             } catch (Exception e) {
                 e.printStackTrace();
-            }*/
+            }
 
             try {
                 if (mYUVFileReader != null) {
@@ -378,7 +389,6 @@ public class AVCEncoder {
                 } else {
                     Log.e(TAG, "No frame data source");
                 }
-
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -393,6 +403,7 @@ public class AVCEncoder {
                     }
                     codec.queueInputBuffer(index, 0, input.length, pts, 0);
                     mGenerateIndex ++;
+                    inFrameIndex ++;
                 } else {
                     if (!endInputBuffer) {
                         codec.queueInputBuffer(index, 0, 0, 0, BUFFER_FLAG_END_OF_STREAM);
@@ -406,7 +417,7 @@ public class AVCEncoder {
         @Override
         public void onOutputBufferAvailable(@NonNull MediaCodec codec, int index,
                                             @NonNull MediaCodec.BufferInfo info) {
-            if (index >= 0){
+            if (index >= 0) {
                 if ((info.flags & BUFFER_FLAG_END_OF_STREAM) != 0) {
                     //Log.d(TAG, "End of output buffer");
                     stop();
@@ -435,8 +446,8 @@ public class AVCEncoder {
 
                     if (lastEncTime > 0) {
                         long encTime = System.currentTimeMillis() - lastEncTime;
-                        Log.i(TAG, String.format(Locale.CHINA, "frame %d, async enc time %d ms",
-                                frameIndex, encTime));
+                        Log.i(TAG, String.format(Locale.CHINA, "out-frame %d, in-frame %d, async enc time %d ms",
+                                outFrameIndex, inFrameIndex, encTime));
                     }
 
                     try {
@@ -451,13 +462,18 @@ public class AVCEncoder {
                             if (mDecoderCallback != null)
                                 mDecoderCallback.call(mKeyFrameData, outSize);
                         }
+
+                        if (outFrameIndex == inFrameIndex && endInputBuffer) {
+                            Log.i(TAG, String.format(Locale.CHINA,
+                                    "Total time %d ms", System.currentTimeMillis() - mTotalStartTime));
+                        }
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
 
                     codec.releaseOutputBuffer(index, false);
 
-                    frameIndex ++;
+                    outFrameIndex ++;
                     lastEncTime = System.currentTimeMillis();
                 }
             }

@@ -11,8 +11,6 @@ import com.example.androidh264codecproject.process.AccumulateMode;
 
 public class FFmpegAVCDecoderCallback extends DecoderCallback {
 
-    private static final String TAG = "DecoderCallback";
-
     private static final int FRAME_TYPE_I = 1;
     private static final int FRAME_TYPE_P = 2;
 
