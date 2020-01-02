@@ -369,7 +369,7 @@ public class AVCEncoder {
         private byte[] mOutData;
         private byte[] mKeyFrameData;
 
-        private ArrayList<Long> gopStartTimeList;
+        private ArrayList<Long> gofStartTimeList;
 
         private AVCCallback() {
             mGenerateIndex = 0;
@@ -377,7 +377,7 @@ public class AVCEncoder {
             mOutData       = new byte[DEFAULT_OUT_DATA_SIZE];
             mKeyFrameData  = new byte[DEFAULT_OUT_DATA_SIZE];
 
-            gopStartTimeList = new ArrayList<>();
+            gofStartTimeList = new ArrayList<>();
 
             if (mDecoderCallback != null)
                 ((FFmpegAVCDecoderCallback) mDecoderCallback).setPFrameLimit(mPFrameLimit);
@@ -412,7 +412,7 @@ public class AVCEncoder {
             if (index >= 0) {
                 if (input != null) {
                     if (inFrameIndex % GOP_SIZE == 0) {
-                        gopStartTimeList.add(System.currentTimeMillis());
+                        gofStartTimeList.add(System.currentTimeMillis());
                     }
 
                     long pts = computePresentationTime(mGenerateIndex);
@@ -489,10 +489,10 @@ public class AVCEncoder {
 
                     final long callbackFinishedTime = System.currentTimeMillis();
 
-                    // Measure GOP delay
+                    // Measure GOF delay
                     if (info.flags != BUFFER_FLAG_CODEC_CONFIG) {
                         if (gofFrameIndex < (mPFrameLimit + 1)) {
-                            final long gopAccuDelay = callbackFinishedTime - gopStartTimeList.get(gofIndex);
+                            final long gopAccuDelay = callbackFinishedTime - gofStartTimeList.get(gofIndex);
 
                             if (gofFrameIndex >= 0) {
                                 Log.i(TAG, String.format(Locale.CHINA,

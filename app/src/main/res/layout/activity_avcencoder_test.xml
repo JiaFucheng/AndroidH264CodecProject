@@ -40,7 +40,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Number of P Frame" />
+            android:text="Number of P Frame (0~11)" />
 
         <EditText
             android:id="@+id/np_edit_text"
