@@ -19,10 +19,13 @@ public class AVCEncoderTestThread extends Thread {
     private boolean enableH264OutputFile = false;
     private boolean enableCallBackTest = true;
     private int encodeMode = EncodeMode.SYNC_MODE;
+    private int pframeLimit = 11;
 
     public void setEncodeMode(int encodeMode) {
         this.encodeMode = encodeMode;
     }
+
+    public void setPFrameLimit(int value) { this.pframeLimit = value; }
 
     @Override
     public void run() {
@@ -74,6 +77,7 @@ public class AVCEncoderTestThread extends Thread {
 
         // Create and initialize ffmpeg yuv encoder
         AVCEncoder encoder = new AVCEncoder(videoWidth, videoHeight, frameRate, bitrate);
+        encoder.setPFrameLimit(pframeLimit);
         if (enableAVIDecodeTest) {
             encoder.setFFmpegAVIDecoder(decoder);
         } else {

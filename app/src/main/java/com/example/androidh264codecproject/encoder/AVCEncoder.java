@@ -8,7 +8,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Locale;
 
-import android.annotation.SuppressLint;
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
@@ -16,6 +15,7 @@ import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.example.androidh264codecproject.decoder.DecoderCallback;
+import com.example.androidh264codecproject.decoder.FFmpegAVCDecoderCallback;
 import com.example.androidh264codecproject.decoder.FFmpegAVIDecoder;
 import com.example.androidh264codecproject.yuvtools.YUVI420FileReader;
 
@@ -29,6 +29,8 @@ public class AVCEncoder {
 
     private static final int TIMEOUT_USEC = 12000;
     private static final int DEFAULT_OUT_DATA_SIZE = 4096;
+    private static final int GOP_SIZE = 12;
+    private int mPFrameLimit;
 
     private int mWidth;
     private int mHeight;
@@ -54,7 +56,6 @@ public class AVCEncoder {
         mFrameRate = frameRate;
 
         final String MIME     = "video/avc";
-        final float  GOP_SIZE = 12.0f;
 
         MediaFormat mediaFormat = MediaFormat.createVideoFormat(MIME, width, height);
         mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT,
@@ -62,7 +63,7 @@ public class AVCEncoder {
         mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, bitrate);
         mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, frameRate);
         //mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 10);
-        mediaFormat.setFloat(MediaFormat.KEY_I_FRAME_INTERVAL, GOP_SIZE / frameRate);
+        mediaFormat.setFloat(MediaFormat.KEY_I_FRAME_INTERVAL, GOP_SIZE * 1.0f / frameRate);
 
         //mediaFormat.setInteger(MediaFormat.KEY_BITRATE_MODE, MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_CQ);
 
@@ -75,6 +76,10 @@ public class AVCEncoder {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public void setPFrameLimit(int value) {
+        mPFrameLimit = value;
     }
 
     public void setInputYUVFile(String filepath) {
@@ -353,6 +358,8 @@ public class AVCEncoder {
         private long lastEncTime = -1;
         private int inFrameIndex = 0;
         private int outFrameIndex = 0;
+        private int gofIndex = 0;
+        private int gofFrameIndex = -1;
 
         private boolean endInputBuffer  = false;
         private boolean endOutputBuffer = false;
@@ -362,11 +369,18 @@ public class AVCEncoder {
         private byte[] mOutData;
         private byte[] mKeyFrameData;
 
+        private ArrayList<Long> gopStartTimeList;
+
         private AVCCallback() {
             mGenerateIndex = 0;
             mConfigByte    = new byte[DEFAULT_OUT_DATA_SIZE];
             mOutData       = new byte[DEFAULT_OUT_DATA_SIZE];
             mKeyFrameData  = new byte[DEFAULT_OUT_DATA_SIZE];
+
+            gopStartTimeList = new ArrayList<>();
+
+            if (mDecoderCallback != null)
+                ((FFmpegAVCDecoderCallback) mDecoderCallback).setPFrameLimit(mPFrameLimit);
         }
 
         @Override
@@ -375,7 +389,9 @@ public class AVCEncoder {
             byte[] input = null;
 
             try {
-                Thread.sleep(40);  // 40ms for 25FPS
+                final long sleepTime = 0;  // You can set 40ms for 25FPS
+                if (sleepTime > 0)
+                    Thread.sleep(sleepTime);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -395,6 +411,10 @@ public class AVCEncoder {
 
             if (index >= 0) {
                 if (input != null) {
+                    if (inFrameIndex % GOP_SIZE == 0) {
+                        gopStartTimeList.add(System.currentTimeMillis());
+                    }
+
                     long pts = computePresentationTime(mGenerateIndex);
                     ByteBuffer inputBuffer = codec.getInputBuffer(index);
                     if (inputBuffer != null) {
@@ -446,8 +466,9 @@ public class AVCEncoder {
 
                     if (lastEncTime > 0) {
                         long encTime = System.currentTimeMillis() - lastEncTime;
-                        Log.i(TAG, String.format(Locale.CHINA, "out-frame %d, in-frame %d, async enc time %d ms",
-                                outFrameIndex, inFrameIndex, encTime));
+                        //Log.i(TAG, String.format(Locale.CHINA,
+                        //        "out-frame-index %d, in-frame-index %d, async-enc-time %d ms",
+                        //        outFrameIndex, inFrameIndex, encTime));
                     }
 
                     try {
@@ -462,18 +483,52 @@ public class AVCEncoder {
                             if (mDecoderCallback != null)
                                 mDecoderCallback.call(mKeyFrameData, outSize);
                         }
-
-                        if (outFrameIndex == inFrameIndex && endInputBuffer) {
-                            Log.i(TAG, String.format(Locale.CHINA,
-                                    "Total time %d ms", System.currentTimeMillis() - mTotalStartTime));
-                        }
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
 
+                    final long callbackFinishedTime = System.currentTimeMillis();
+
+                    // Measure GOP delay
+                    if (info.flags != BUFFER_FLAG_CODEC_CONFIG) {
+                        if (gofFrameIndex < (mPFrameLimit + 1)) {
+                            final long gopAccuDelay = callbackFinishedTime - gopStartTimeList.get(gofIndex);
+
+                            if (gofFrameIndex >= 0) {
+                                Log.i(TAG, String.format(Locale.CHINA,
+                                        "GOF-index %d GOF-frame-index %d time %d ms",
+                                        gofIndex, gofFrameIndex, gopAccuDelay));
+                            }
+
+                            if (gofFrameIndex > 0 &&
+                                    (gofFrameIndex == (GOP_SIZE - 1) ||
+                                     gofFrameIndex == mPFrameLimit)) {
+                                Log.i(TAG, String.format(Locale.CHINA,
+                                        "GOF-index %d time %d ms",
+                                        gofIndex, gopAccuDelay));
+                            }
+
+                            gofFrameIndex++;
+                        }
+
+                        if (outFrameIndex % GOP_SIZE == 0 &&
+                            outFrameIndex / GOP_SIZE > 0) {
+                            gofFrameIndex = 0;
+                            gofIndex++;
+                        }
+                    }
+
+                    if (outFrameIndex == (inFrameIndex - 1) && endInputBuffer) {
+                        Log.i(TAG, String.format(Locale.CHINA,
+                                "Video total time %d ms",
+                                System.currentTimeMillis() - mTotalStartTime));
+                    }
+
                     codec.releaseOutputBuffer(index, false);
 
-                    outFrameIndex ++;
+                    if (info.flags != BUFFER_FLAG_CODEC_CONFIG)
+                        outFrameIndex++;
+
                     lastEncTime = System.currentTimeMillis();
                 }
             }

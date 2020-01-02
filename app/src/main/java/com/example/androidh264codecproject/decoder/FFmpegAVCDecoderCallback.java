@@ -5,9 +5,11 @@ import android.util.Log;
 import com.example.androidh264codecproject.encoder.MotionVectorList;
 import com.example.androidh264codecproject.encoder.MotionVectorListItem;
 import com.example.androidh264codecproject.encoder.MotionVectorMap;
-import com.example.androidh264codecproject.encoder.ResidualMap;
 import com.example.androidh264codecproject.process.AccumulateCPU;
 import com.example.androidh264codecproject.process.AccumulateMode;
+import com.example.androidh264codecproject.process.ResidualCPU;
+
+import java.util.Locale;
 
 public class FFmpegAVCDecoderCallback extends DecoderCallback {
 
@@ -16,22 +18,30 @@ public class FFmpegAVCDecoderCallback extends DecoderCallback {
 
     private boolean getMVMapFlag = true;
     private boolean saveMVMapFlag = false;
-    private boolean accuMVFlag = false;
+    private boolean accuMVFlag = true;
     private boolean getMVListFlag = false;
-    private boolean getResidualFlag = false;
-    private boolean accuResidualFlag = false;
+    private boolean getResidualFlag = true;
+    private boolean showLogFlag = false;
 
     private FFmpegAVCDecoder decoder;
     private AccumulateCPU    accuMV;
-    private AccumulateCPU    accuRes;
+    private ResidualCPU      resProc;
+
+    private final int GOP_SIZE = 12;
+    private int pframeLimit;
+    private int curPFrameIndex;
+    private byte[] refIFrameData;
 
     public FFmpegAVCDecoderCallback(int w, int h) {
         decoder = new FFmpegAVCDecoder(w, h);
         accuMV  = new AccumulateCPU(w, h, 16);
-        accuRes = new AccumulateCPU(w, h, 16);
+        resProc = new ResidualCPU(w, h, 16);
 
         accuMV.resetAccumulatedMV();
-        accuRes.resetAccumulatedResidual();
+    }
+
+    public void setPFrameLimit(int value) {
+        this.pframeLimit = value;
     }
 
     @Override
@@ -41,18 +51,25 @@ public class FFmpegAVCDecoderCallback extends DecoderCallback {
         long startMs = System.currentTimeMillis();
         if (decoder.decodeFrame(packetData)) {
             // NOTE: Exactly got a decoded frame
-            Log.d(TAG, String.format("Decode time %d ms",
-                    System.currentTimeMillis() - startMs));
+            if (showLogFlag) {
+                Log.d(TAG, String.format("Decode time %d ms",
+                        System.currentTimeMillis() - startMs));
+            }
 
             int frameType = 0;
+            MotionVectorMap mvMap;
 
             if (getMVMapFlag) {
                 startMs = System.currentTimeMillis();
-                MotionVectorMap mvMap = decoder.getMotionVectorMap();
-                Log.d(TAG, String.format("Get mv time %d ms",
-                        System.currentTimeMillis() - startMs));
+                mvMap = decoder.getMotionVectorMap();
                 if (mvMap != null) {
+                    if (showLogFlag) {
+                        Log.d(TAG, String.format("Get mv time %d ms pframe-index %d",
+                                System.currentTimeMillis() - startMs,
+                                curPFrameIndex + 1));
+                    }
                     frameType = FRAME_TYPE_P;
+                    curPFrameIndex ++;
 
                     if (saveMVMapFlag)
                         MotionVectorMap.saveMotionVectorMap(
@@ -63,19 +80,21 @@ public class FFmpegAVCDecoderCallback extends DecoderCallback {
                     if (accuMVFlag) {
                         startMs = System.currentTimeMillis();
                         accuMV.accumulateMV(mvMap.getData(),
-                                AccumulateMode.PIXEL_LEVEL);
-                        Log.d(TAG, String.format(
-                                "Accu time %d ms",
-                                System.currentTimeMillis() - startMs));
+                                            AccumulateMode.PIXEL_LEVEL);
+                        if (showLogFlag) {
+                            Log.d(TAG, String.format(
+                                    "Accu time %d ms",
+                                    System.currentTimeMillis() - startMs));
+                        }
                     }
                 } else {
                     frameType = FRAME_TYPE_I;
+                    curPFrameIndex = 0;
                     if (accuMVFlag)
                         accuMV.resetAccumulatedMV();
+                    refIFrameData = decoder.getFrameData();
                 }
             }
-
-            startMs = System.currentTimeMillis();
 
             MotionVectorList mvList = null;
             if (getMVListFlag) {
@@ -91,6 +110,8 @@ public class FFmpegAVCDecoderCallback extends DecoderCallback {
                         int posY = item.getPosY();
                         int sizeX = item.getSizeX();
                         int sizeY = item.getSizeY();
+                        Log.d(TAG, String.format(Locale.CHINA, "MV (%d,%d) Pos (%d,%d) Size (%d,%d)",
+                                mvX, mvY, posX, posY, sizeX, sizeY));
                     }
                 } else {
                     frameType = FRAME_TYPE_I;
@@ -99,21 +120,17 @@ public class FFmpegAVCDecoderCallback extends DecoderCallback {
 
             if (getResidualFlag) {
                 if (frameType == FRAME_TYPE_P) {
-                    ResidualMap resMap = decoder.getResidualMap();
-                    if (resMap != null && accuResidualFlag && mvList != null) {
-                        accuRes.accumulateResidual(resMap.getData(), mvList.getData(), mvList.getCount());
-                        Log.d(TAG, String.format(
-                                "accu res time %d ms",
-                                System.currentTimeMillis() - startMs));
-                    }
-                } else {
-                    if (accuResidualFlag) {
-                        int[] accuResArray = accuRes.getAccumulatedResidual();
-                        Log.d(TAG, String.format(
-                                "get accu res time %d ms",
-                                System.currentTimeMillis() - startMs));
-
-                        accuRes.resetAccumulatedResidual();
+                    if (curPFrameIndex == GOP_SIZE - 1 ||
+                        curPFrameIndex == pframeLimit) {
+                        startMs = System.currentTimeMillis();
+                        resProc.getResidual(decoder.getFrameData(),
+                                            refIFrameData,
+                                            accuMV.getAccumulatedMV());
+                        if (showLogFlag) {
+                            Log.d(TAG, String.format(Locale.CHINA,
+                                    "Get residual time %d ms",
+                                    System.currentTimeMillis() - startMs));
+                        }
                     }
                 }
             }
@@ -124,6 +141,5 @@ public class FFmpegAVCDecoderCallback extends DecoderCallback {
     public void close() {
         decoder.free();
         accuMV.shutdown();
-        accuRes.shutdown();
     }
 }

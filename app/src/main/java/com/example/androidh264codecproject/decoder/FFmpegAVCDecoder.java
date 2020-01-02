@@ -9,6 +9,7 @@ public class FFmpegAVCDecoder {
     private long handle;
     private int videoWidth;
     private int videoHeight;
+    private int yuvFrameDataSize;
     private int mvMapDataSize;
     private int resMapDataSize;
     private int[] mvMapData;
@@ -17,8 +18,9 @@ public class FFmpegAVCDecoder {
     public FFmpegAVCDecoder(int videoWidth, int videoHeight) {
         this.videoWidth  = videoWidth;
         this.videoHeight = videoHeight;
-        this.mvMapDataSize  = videoWidth * videoHeight * 2;
-        this.resMapDataSize = videoWidth * videoHeight * 3 / 2;
+        this.yuvFrameDataSize = videoWidth * videoHeight * 3 / 2;
+        this.mvMapDataSize    = videoWidth * videoHeight * 2;
+        this.resMapDataSize   = videoWidth * videoHeight * 3 / 2;
         this.mvMapData     = new int[mvMapDataSize];
         this.resMapData    = new byte[resMapDataSize];
         this.handle        = nativeInit(videoWidth, videoHeight);
@@ -59,6 +61,15 @@ public class FFmpegAVCDecoder {
         }
     }
 
+    public byte[] getFrameData() {
+        byte[] yuvFrameData = new byte[yuvFrameDataSize];
+        if (nativeGetYUVFrameData(this.handle, yuvFrameData)) {
+            return yuvFrameData;
+        } else {
+            return null;
+        }
+    }
+
     private native long nativeInit(int videoWidth, int videoHeight);
     private native void nativeFree(long handle);
     private native boolean nativeDecodeFrame(long handle, byte[] packetData);
@@ -66,5 +77,5 @@ public class FFmpegAVCDecoder {
     private native int nativeGetMotionVectorListCount(long handle);
     private native void nativeGetMotionVectorList(long handle, int[] mvListData);
     private native boolean nativeGetResidualMapData(long handle, byte[] resArrayData);
-
+    private native boolean nativeGetYUVFrameData(long handle, byte[] yuvFrameData);
 }

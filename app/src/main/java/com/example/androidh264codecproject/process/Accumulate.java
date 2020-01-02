@@ -1,13 +1,13 @@
 package com.example.androidh264codecproject.process;
 
-public class AccumulateDevice {
+public class Accumulate {
 
     protected int width;
     protected int height;
     protected int accuMVDataSize;
     protected int accuResDataSize;
 
-    public AccumulateDevice(int width, int height, int block_size) {
+    public Accumulate(int width, int height, int block_size) {
         init(width, height, block_size);
     }
 

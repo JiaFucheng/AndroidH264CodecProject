@@ -7,9 +7,12 @@
     tools:context=".AVCEncoderTestActivity">
 
     <LinearLayout
+        android:id="@+id/linearLayout"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="horizontal">
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+
+        app:layout_constraintTop_toTopOf="parent">
 
         <Button
             android:id="@+id/sync_button"
@@ -24,6 +27,27 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Async Mode" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintTop_toBottomOf="@+id/linearLayout">
+
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Number of P Frame" />
+
+        <EditText
+            android:id="@+id/np_edit_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:text="6" />
     </LinearLayout>
 
 </android.support.constraint.ConstraintLayout>

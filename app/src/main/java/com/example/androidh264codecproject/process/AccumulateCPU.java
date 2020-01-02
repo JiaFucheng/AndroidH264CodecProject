@@ -1,6 +1,6 @@
 package com.example.androidh264codecproject.process;
 
-public class AccumulateCPU extends AccumulateDevice {
+public class AccumulateCPU extends Accumulate {
 
     private long handle;
 

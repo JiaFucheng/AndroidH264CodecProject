@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.app.Activity;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 
 import com.example.androidh264codecproject.encoder.EncodeMode;
 
@@ -38,8 +39,13 @@ public class AVCEncoderTestActivity extends Activity {
         syncButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                EditText npEditText = (EditText) findViewById(R.id.np_edit_text);
+                final int np = Integer.parseInt(npEditText.getText().toString());
+
                 AVCEncoderTestThread t = new AVCEncoderTestThread();
                 t.setEncodeMode(EncodeMode.SYNC_MODE);
+                t.setPFrameLimit(np);
+
                 t.start();
             }
         });
@@ -48,8 +54,13 @@ public class AVCEncoderTestActivity extends Activity {
         asyncButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                EditText npEditText = (EditText) findViewById(R.id.np_edit_text);
+                final int np = Integer.parseInt(npEditText.getText().toString());
+
                 AVCEncoderTestThread t = new AVCEncoderTestThread();
                 t.setEncodeMode(EncodeMode.ASYNC_MODE);
+                t.setPFrameLimit(np);
+
                 t.start();
             }
         });
